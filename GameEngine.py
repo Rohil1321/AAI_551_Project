@@ -5,7 +5,7 @@ import pickle
 from Veggie import Veggie
 from Captain import Captain
 from Rabbit import Rabbit
-
+from Snake import Snake
 
 class GameEngine:
 
@@ -22,6 +22,7 @@ class GameEngine:
         self._captain = None
         self._all_veggies = []
         self._score = 0
+        self._snake = None
 
     def initVeggies(self):
         """
@@ -121,6 +122,7 @@ class GameEngine:
         self.initVeggies()
         self.initCaptain()
         self.initRabbits()
+        self.initSnake()
 
     def remainingVeggies(self):
         """
@@ -144,6 +146,7 @@ class GameEngine:
             print(f"Symbol: {veggie.get_symbol()}, Name: {veggie.get_name()}, Points: {veggie.get_points()}")
         print(f"Captain Veggie symbol: {self._captain.get_symbol()}")
         print("Rabbit symbol: R")
+        print(f"Snake symbol: S")
         print("Let the harvest begin!")
 
     def printField(self):
@@ -278,6 +281,74 @@ class GameEngine:
             self.moveCptHorizontal(1)  # Move right
         else:
             print("Invalid input. Please enter W, A, S, or D.")
+
+    def initSnake(self):
+        """
+        Instantiate a new Snake object in a random, unoccupied slot in the field.
+        This function should be called after initializing the rabbits.
+        """
+        if not self._field:
+            print("Error: Field not initialized.")
+            return
+
+        field_size_height = len(self._field)
+        field_size_width = len(self._field[0])
+
+        # Find a random, unoccupied position for the snake
+        while True:
+            location_h = random.randrange(0, field_size_height)
+            location_w = random.randrange(0, field_size_width)
+
+            if self._field[location_h][location_w] is None:
+                break
+
+        # Instantiate the Snake object and store it in the member variable
+        self._snake = Snake(location_h, location_w)
+        self._field[location_h][location_w] = self._snake
+
+    def moveSnake(self):
+        """
+        Attempt to move the snake on the field.
+        The snake moves closer to the captain's position.
+        If the snake attempts to move into the same position as the captain,
+        the captain loses the last five vegetables, and the snake is reset to a new position.
+        """
+        if self._snake is None:
+            print("Error: Snake not initialized.")
+            return
+
+        captain_position = (self._captain.get_x(), self._captain.get_y())
+        snake_position = (self._snake.get_x(), self._snake.get_y())
+
+        # Calculate the direction for the snake to move towards the captain
+        direction_x = 0 if captain_position[0] == snake_position[0] else (
+            1 if captain_position[0] > snake_position[0] else -1)
+        direction_y = 0 if captain_position[1] == snake_position[1] else (
+            1 if captain_position[1] > snake_position[1] else -1)
+
+        new_x = snake_position[0] + direction_x
+        new_y = snake_position[1] + direction_y
+
+        # Check if the new location is within the field boundaries
+        if 0 <= new_x < len(self._field) and 0 <= new_y < len(self._field[0]):
+            if self._field[new_x][new_y] is None:
+                # Move the snake to the new position
+                self._field[snake_position[0]][snake_position[1]] = None
+                self._snake.set_x(new_x)
+                self._snake.set_y(new_y)
+                self._field[new_x][new_y] = self._snake
+
+                # Check if the snake is in the same position as the captain
+                if (new_x, new_y) == captain_position:
+                    # If the snake is in the captain's position, the captain loses the last five vegetables
+                    self._captain.loseLastFiveVeggies()
+
+                    # Reset the snake to a new random, unoccupied position
+                    self.initSnake()
+            else:
+                print("Oops! Snake movement would cause a collision.")
+        else:
+            print("Oops! Snake movement would go beyond field boundaries.")
 
     def gameOver(self):
         """
